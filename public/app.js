@@ -18,13 +18,13 @@ async function fetchLinks() {
     let editCell = row.insertCell(4);
     const orgDiv = `<div style="display:flex;"><div style="width:300px;white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${link.originalUrl}</div> <button class="btn" onclick="copyContent('${link.originalUrl}');">📋</button></div>`;
     originalCell.innerHTML = orgDiv;
-    shortCell.innerHTML = `<button class="btn btn-light" onclick="window.open('${link.shortenedUrl}')">codedar.win/${link.shortenedUrl}</button>`;
+    shortCell.innerHTML = `<button class="btn btn-light" onclick="window.open('${link.shortenedUrl}')">${window.location.host}/${link.shortenedUrl}</button>`;
     aliasCell.textContent = link.alias; // Populate the alias cell
     clickCount.textContent = link.clickCount;
     const breakDiv = ` `;
     const editButtom = `<button class="btn btn-outline-primary" onclick="createEditForm('${link.id}', '${link.originalUrl}', '${link.alias}','${link.shortenedUrl}')">Edit</button>`;
     const deleteButton = `<button class="btn btn-outline-danger" onclick="createDeleteForm('${link.id}' ,'${link.originalUrl}', '${link.alias}','${link.shortenedUrl}')">Delete</button>`;
-    const copyToClipBoard = `<button class="btn btn-outline-info" onclick="copyContent('codedar.win/${link.shortenedUrl}')">Copy</button>`;
+    const copyToClipBoard = `<button class="btn btn-outline-info" onclick="copyContent('${window.location.host}/${link.shortenedUrl}')">Copy</button>`;
     editCell.innerHTML =
       copyToClipBoard + breakDiv + editButtom + breakDiv + deleteButton;
   });
