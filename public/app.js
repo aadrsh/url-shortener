@@ -14,11 +14,13 @@ async function fetchLinks() {
     let aliasCell = row.insertCell(0); // Cell for the alias
     let originalCell = row.insertCell(1);
     let shortCell = row.insertCell(2);
-    let editCell = row.insertCell(3);
+    let clickCount = row.insertCell(3);
+    let editCell = row.insertCell(4);
     const orgDiv = `<div style="display:flex;"><div style="width:300px;white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${link.originalUrl}</div> <button class="btn" onclick="copyContent('${link.originalUrl}');">📋</button></div>`;
     originalCell.innerHTML = orgDiv;
     shortCell.innerHTML = `<button class="btn btn-light" onclick="window.open('${link.shortenedUrl}')">codedar.win/${link.shortenedUrl}</button>`;
     aliasCell.textContent = link.alias; // Populate the alias cell
+    clickCount.textContent = link.clickCount;
     const breakDiv = ` `;
     const editButtom = `<button class="btn btn-outline-primary" onclick="createEditForm('${link.id}', '${link.originalUrl}', '${link.alias}','${link.shortenedUrl}')">Edit</button>`;
     const deleteButton = `<button class="btn btn-outline-danger" onclick="createDeleteForm('${link.id}' ,'${link.originalUrl}', '${link.alias}','${link.shortenedUrl}')">Delete</button>`;

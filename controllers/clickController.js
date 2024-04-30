@@ -1,13 +1,13 @@
 const { Click, Link } = require("../models");
 
-const recordClick = async () => {
-  const { linkId } = req.params; // Get link ID from route parameters
-  const headerDetails = req.headers; // Collect some header info (or more specific if needed)
-
+const recordClick = async (linkId, ipAddress, platform) => {
+  const clickedAt = new Date();
   try {
     const click = await Click.create({
       linkId,
-      headerDetails,
+      clickedAt,
+      ipAddress,
+      platform,
     });
     return click;
   } catch (error) {

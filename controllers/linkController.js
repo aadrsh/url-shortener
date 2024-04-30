@@ -1,4 +1,5 @@
-const { Link } = require("../models");
+const { Link, Click } = require("../models");
+const Sequelize = require("sequelize");
 
 const generateShortCode = require("../utils/shortCodeGenerator"); // Import the utility function
 
@@ -75,9 +76,37 @@ const deleteLink = async (req, res) => {
 const getAllLinks = async (req, res) => {
   try {
     console.log("getAllLinks called");
-    const links = await Link.findAll({ order: [["updatedAt", "DESC"]] });
-    res.json(links);
+    const links = await Link.findAll({
+      attributes: [
+        "id",
+        "originalUrl",
+        "shortenedUrl",
+        "alias", // include all required Link attributes
+        [Sequelize.fn("COUNT", Sequelize.col("clicks.id")), "clickCount"], // Aggregate function to count Clicks
+      ],
+      include: [
+        {
+          model: Click,
+          as: "clicks",
+          attributes: [], // No attributes needed from Clicks
+        },
+      ],
+      group: [
+        "Link.id",
+        "Link.originalUrl",
+        "Link.shortenedUrl",
+        "Link.alias",
+        "Link.deletedAt",
+        "Link.createdAt",
+        "Link.updatedAt",
+      ], // Ensure grouping by all Link attributes
+      order: [["updatedAt", "DESC"]], // Sorting links by updatedAt in descending order
+    });
+
+    // Converting to JSON might be necessary to properly see the results
+    res.json(links.map((link) => link.toJSON()));
   } catch (error) {
+    console.error("Error in getAllLinks:", error);
     res.status(500).json({ error: error.message });
   }
 };
