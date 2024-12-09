@@ -65,8 +65,13 @@ const invalid = (req, res) => {
   res.redirect(WEB_SERVER_URL + "/brokenlink");
 };
 
+const home = (req, res) => {
+  res.redirect(WEB_SERVER_URL + "/login");
+};
+
 module.exports = {
   getExternalLink,
   getQRCode,
-  invalid
+  invalid,
+  home,
 };

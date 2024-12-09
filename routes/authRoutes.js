@@ -18,7 +18,7 @@ router.get( '/google/callback',
 
 router.get('/google/success', authMiddleware, (req, res) => {
     // res.send('You have successfully logged in with Google.');
-    res.redirect('/dashboard');
+    res.redirect('/');
 });
 
 router.get( '/google/failure', (req, res) => {

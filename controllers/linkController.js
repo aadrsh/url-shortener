@@ -59,7 +59,7 @@ const updateLink = async (req, res) => {
     if(isShortCodeInvalid(shortUrl)){
       return res.status(400).json({ error: "Invalid Short URL." });
     }
-
+    const capShortUrl = shortUrl.toUpperCase();
     const updatedLink = await prisma.link.update({
       where: { id: linkId },
       data: { originalUrl, shortUrl, alias },

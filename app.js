@@ -51,7 +51,7 @@ webApp.get('/login', (req, res) => {
     res.sendFile(__dirname + "/public/login.html");
 });
 
-webApp.get('/dashboard', authMiddleware, (req,res) => {
+webApp.get('/dashboard', authMiddleware,roleMiddleware("admin"), (req,res) => {
     res.sendFile(__dirname + "/private/dashboard.html");
 });
 
