@@ -26,5 +26,13 @@ router.get( '/google/failure', (req, res) => {
     res.redirect('/authfailed?message=' + req.session.messages[0]);
 });
 
+router.post('/logout', (req, res) => {
+    req.logout((err) => {
+        if (err) {
+            return res.status(500).send('Error logging out');
+        }
+    });
+    res.redirect('/');
+});
 
 module.exports = router;

@@ -2,6 +2,50 @@ window.onload = function () {
     fetchLinks();
   };
   
+  document.getElementById("logoutButton").addEventListener("click", async function () {
+    const response = await fetch("/auth/logout", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "Accept": "application/json" },
+    });
+
+    if (response.ok) {
+      window.location.href = "/login";
+    } else {
+      const errorResult = await response.json();
+      showMessage(`Error: ${errorResult.error}`, true);
+    }
+  });
+
+  function updatePagination(pagination) {
+    const paginationElement = document.querySelector(".pagination");
+    paginationElement.innerHTML = "";
+  
+    if (pagination.currentPage > 1) {
+      const prevPageItem = document.createElement("li");
+      prevPageItem.classList.add("page-item");
+      prevPageItem.innerHTML = `<a class="page-link" href="#" onclick="fetchLinks(${pagination.currentPage - 1})" aria-label="Previous"><span aria-hidden="true">&laquo;</span></a>`;
+      paginationElement.appendChild(prevPageItem);
+    }
+  
+    for (let i = 1; i <= pagination.totalPages; i++) {
+      const pageItem = document.createElement("li");
+      pageItem.classList.add("page-item");
+      if (i === pagination.currentPage) {
+          pageItem.classList.add("active");
+      }
+      pageItem.innerHTML = `<a class="page-link" href="#" onclick="fetchLinks(${i})">${i}</a>`;
+      paginationElement.appendChild(pageItem);
+    }
+  
+    if (pagination.currentPage < pagination.totalPages) {
+      const nextPageItem = document.createElement("li");
+      nextPageItem.classList.add("page-item");
+      nextPageItem.innerHTML = `<a class="page-link" href="#" onclick="fetchLinks(${pagination.currentPage + 1})" aria-label="Next"><span aria-hidden="true">&raquo;</span></a>`;
+      paginationElement.appendChild(nextPageItem);
+    }
+  }
+  
+
   async function fetchLinks() {
     //get the id from url
     const urlParams = new URLSearchParams(window.location.search);
@@ -9,6 +53,7 @@ window.onload = function () {
     var response;
     if(id){
       response = await fetch(`/api/links/${id}`, { headers: { "Content-Type": "application/json", "Accept": "application/json" } });
+      
     }else{
       response = await fetch("/api/links/mylinks", { headers: { "Content-Type": "application/json", "Accept": "application/json" } });
     }
@@ -45,6 +90,7 @@ window.onload = function () {
         editCell.innerHTML =
           copyToClipBoard + breakDiv + editButtom + breakDiv + deleteButton;
       });
+      updatePagination(result.pagination);
   }
   
   const copyContent = async (content) => {
@@ -188,4 +234,5 @@ window.onload = function () {
       onClick: function () { }, // Callback after click
     }).showToast();
   }
+  
   

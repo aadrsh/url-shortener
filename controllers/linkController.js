@@ -62,7 +62,7 @@ const updateLink = async (req, res) => {
     const capShortUrl = shortUrl.toUpperCase();
     const updatedLink = await prisma.link.update({
       where: { id: linkId },
-      data: { originalUrl, shortUrl, alias },
+      data: { originalUrl, shortUrl:capShortUrl, alias },
     });
 
     res.json(updatedLink);
@@ -107,24 +107,42 @@ const deleteLink = async (req, res) => {
 
 //restrict to admin only
 const getAllLinks = async (req, res) => {
-  const {id} = req.params;
-  try{
+  const { page = 1, limit = 10 } = req.query; // Default to page 1 and limit 10
+  const offset = (page - 1) * limit;
+
+  try {
     const links = await prisma.link.findMany({
+      skip: offset,
+      take: parseInt(limit, 10),
       select: {
-      id: true,
-      originalUrl: true,
-      shortUrl: true,
-      alias: true,
-      _count: {
-        select: { clicks: true }, // Aggregate function to count Clicks
+        id: true,
+        originalUrl: true,
+        shortUrl: true,
+        alias: true,
+        createdBy: true,
+        _count: {
+          select: { clicks: true }, // Aggregate function to count Clicks
         },
       },
       orderBy: {
-      createdAt: 'desc', // Sorting links by updatedAt in descending order
+        createdAt: 'desc', // Sorting links by updatedAt in descending order
       },
     });
-    // Converting to JSON might be necessary to properly see the results
-    const result = {'redirectServerUrl': REDIRECT_SERVER_URL, 'links': links};
+
+    const totalLinks = await prisma.link.count();
+    const totalPages = Math.ceil(totalLinks / limit);
+
+    const result = {
+      redirectServerUrl: REDIRECT_SERVER_URL,
+      links,
+      pagination: {
+        totalLinks,
+        totalPages,
+        currentPage: parseInt(page, 10),
+        limit: parseInt(limit, 10),
+      },
+    };
+
     res.json(result);
   } catch (error) {
     console.error("Error in getAllLinks:", error);
@@ -134,27 +152,45 @@ const getAllLinks = async (req, res) => {
 
 //this will return the links created by the user
 const getMyLinks = async (req, res) => {
-  try{
+  const { page = 1, limit = 10 } = req.query; // Default to page 1 and limit 10
+  const offset = (page - 1) * limit;
+
+  try {
     const links = await prisma.link.findMany({
       where: { createdById: req.user.id },
+      skip: offset,
+      take: parseInt(limit, 10),
       select: {
-      id: true,
-      originalUrl: true,
-      shortUrl: true,
-      alias: true,
-      _count: {
-        select: { clicks: true }, // Aggregate function to count Clicks
-      },
+        id: true,
+        originalUrl: true,
+        shortUrl: true,
+        alias: true,
+        _count: {
+          select: { clicks: true }, // Aggregate function to count Clicks
+        },
       },
       orderBy: {
-      createdAt: 'desc', // Sorting links by updatedAt in descending order
+        createdAt: 'desc', // Sorting links by updatedAt in descending order
       },
     });
-    // Converting to JSON might be necessary to properly see the results
-    const result = {'redirectServerUrl': REDIRECT_SERVER_URL, 'links': links};
+
+    const totalLinks = await prisma.link.count({ where: { createdById: req.user.id } });
+    const totalPages = Math.ceil(totalLinks / limit);
+
+    const result = {
+      redirectServerUrl: REDIRECT_SERVER_URL,
+      links,
+      pagination: {
+        totalLinks,
+        totalPages,
+        currentPage: parseInt(page, 10),
+        limit: parseInt(limit, 10),
+      },
+    };
+
     res.json(result);
   } catch (error) {
-    console.error("Error in getAllLinks:", error);
+    console.error("Error in getMyLinks:", error);
     res.status(500).json({ error: error.message });
   }
 };
@@ -162,7 +198,9 @@ const getMyLinks = async (req, res) => {
 //this will be used by admin only
 const getLinksById = async (req, res) => {
   console.log("getLinksById invoked");
-  const {id} = req.params;
+  const { id } = req.params;
+  const { page = 1, limit = 10 } = req.query; // Default to page 1 and limit 10
+  const offset = (page - 1) * limit;
 
   // Check if the 'id' exists and is a valid number (using a regular expression for numeric validation)
   if (!id || !/^\d+$/.test(id)) {
@@ -171,31 +209,46 @@ const getLinksById = async (req, res) => {
   
   const userId = parseInt(id, 10);
 
-  if(userId !== req.user.id && req.user.role !== 'admin'){
+  if (userId !== req.user.id && req.user.role !== 'admin') {
     return res.status(403).json({ error: "You are not authorized to access this link." });
   }
 
-  try{
+  try {
     const links = await prisma.link.findMany({
       where: { createdById: userId },
+      skip: offset,
+      take: parseInt(limit, 10),
       select: {
-      id: true,
-      originalUrl: true,
-      shortUrl: true,
-      alias: true,
-      _count: {
-        select: { clicks: true }, // Aggregate function to count Clicks
-      },
+        id: true,
+        originalUrl: true,
+        shortUrl: true,
+        alias: true,
+        _count: {
+          select: { clicks: true }, // Aggregate function to count Clicks
+        },
       },
       orderBy: {
-      createdAt: 'desc', // Sorting links by updatedAt in descending order
+        createdAt: 'desc', // Sorting links by updatedAt in descending order
       },
     });
-    // Converting to JSON might be necessary to properly see the results
-    const result = {'redirectServerUrl': REDIRECT_SERVER_URL, 'links': links};
+
+    const totalLinks = await prisma.link.count({ where: { createdById: userId } });
+    const totalPages = Math.ceil(totalLinks / limit);
+
+    const result = {
+      redirectServerUrl: REDIRECT_SERVER_URL,
+      links,
+      pagination: {
+        totalLinks,
+        totalPages,
+        currentPage: parseInt(page, 10),
+        limit: parseInt(limit, 10),
+      },
+    };
+
     res.json(result);
   } catch (error) {
-    console.error("Error in getAllLinks:", error);
+    console.error("Error in getLinksById:", error);
     res.status(500).json({ error: error.message });
   }
 };

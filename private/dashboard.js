@@ -2,11 +2,14 @@ window.onload = function () {
   fetchLinks();
 };
 
-async function fetchLinks() {
-  const response = await fetch("/api/links", { headers: { "Content-Type": "application/json", "Accept": "application/json" } });
+let currentPage = 1;
+const limit = 10;
+
+async function fetchLinks(page = 1) {
+  currentPage = page;
+  const response = await fetch(`/api/links?page=${page}&limit=${limit}`, { headers: { "Content-Type": "application/json", "Accept": "application/json" } });
   const result = await response.json();
   const links = result.links;
-  console.log(links);
   const redirectServerUrl = result.redirectServerUrl;
   const tbody = document
     .getElementById("linksTable")
@@ -28,7 +31,7 @@ async function fetchLinks() {
       const orgDiv = `<div style="display:flex;"><div style="width:200px;white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${link.originalUrl}</div> <button class="btn" onclick="copyContent('${link.originalUrl}');">📋</button></div>`;
       originalCell.innerHTML = orgDiv;
       shortCell.innerHTML = `<button class="btn btn-light" onclick="window.open('${redirectServerUrl+'/'+link.shortUrl}')">${link.shortUrl}</button>`;
-      aliasCell.textContent = link.alias; // Populate the alias cell
+      aliasCell.textContent = link.createdBy.name; // Populate the alias cell
       clickCount.textContent = link._count.clicks;
       const breakDiv = ` `;
       const editButtom = `<button class="btn btn-outline-primary" onclick="createEditForm('${link.id}', '${link.originalUrl}', '${link.alias}','${link.shortUrl}')">Edit</button>`;
@@ -37,6 +40,37 @@ async function fetchLinks() {
       editCell.innerHTML =
         copyToClipBoard + breakDiv + editButtom + breakDiv + deleteButton;
     });
+
+  updatePagination(result.pagination);
+}
+
+function updatePagination(pagination) {
+  const paginationElement = document.querySelector(".pagination");
+  paginationElement.innerHTML = "";
+
+  if (pagination.currentPage > 1) {
+    const prevPageItem = document.createElement("li");
+    prevPageItem.classList.add("page-item");
+    prevPageItem.innerHTML = `<a class="page-link" href="#" onclick="fetchLinks(${pagination.currentPage - 1})" aria-label="Previous"><span aria-hidden="true">&laquo;</span></a>`;
+    paginationElement.appendChild(prevPageItem);
+  }
+
+  for (let i = 1; i <= pagination.totalPages; i++) {
+    const pageItem = document.createElement("li");
+    pageItem.classList.add("page-item");
+    if (i === pagination.currentPage) {
+        pageItem.classList.add("active");
+    }
+    pageItem.innerHTML = `<a class="page-link" href="#" onclick="fetchLinks(${i})">${i}</a>`;
+    paginationElement.appendChild(pageItem);
+  }
+
+  if (pagination.currentPage < pagination.totalPages) {
+    const nextPageItem = document.createElement("li");
+    nextPageItem.classList.add("page-item");
+    nextPageItem.innerHTML = `<a class="page-link" href="#" onclick="fetchLinks(${pagination.currentPage + 1})" aria-label="Next"><span aria-hidden="true">&raquo;</span></a>`;
+    paginationElement.appendChild(nextPageItem);
+  }
 }
 
 const copyContent = async (content) => {
@@ -47,6 +81,20 @@ const copyContent = async (content) => {
     console.error("Failed to copy: ", err);
   }
 };
+
+document.getElementById("logoutButton").addEventListener("click", async function () {
+  const response = await fetch("/auth/logout", {
+    method: "POST",
+    headers: { "Content-Type": "application/json", "Accept": "application/json" },
+  });
+
+  if (response.ok) {
+    window.location.href = "/login";
+  } else {
+    const errorResult = await response.json();
+    showMessage(`Error: ${errorResult.error}`, true);
+  }
+});
 
 function createDeleteForm(id, originalUrl, alias, shortCode) {
   // Update input fields
@@ -75,7 +123,7 @@ async function deleteLink() {
     const result = await response.json();
     showMessage("Link deleted");
     closeDeleteForm();
-    fetchLinks(); // Refresh list
+    fetchLinks(currentPage); // Refresh list
   }
 }
 
@@ -116,7 +164,7 @@ async function updateLink() {
     const result = await response.json();
     showMessage("Link updated");
     closeEditForm();
-    fetchLinks(); // Refresh list
+    fetchLinks(currentPage); // Refresh list
   }
 }
 
@@ -158,7 +206,7 @@ async function createLink() {
     closeCreateForm();
   }
 
-  fetchLinks(); // Refresh list
+  fetchLinks(currentPage); // Refresh list
 }
 
 function closeCreateForm() {

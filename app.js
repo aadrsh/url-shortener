@@ -5,9 +5,12 @@ const useragent = require("express-useragent");
 const {passport} = require("./auth");
 const { authMiddleware,roleMiddleware } = require("./middlewares");
 
+const REDIRECT_SERVER_URL = process.env.REDIRECT_SERVER_URL || "http://localhost:3001";
+const WEB_SERVER_URL = process.env.WEB_SERVER_URL || "http://localhost:3000";
+
 const webApp = express();
 webApp.use(cors({
-    origin: ["http://localhost:3000", "http://localhost:3001"],
+    origin: [WEB_SERVER_URL, REDIRECT_SERVER_URL],
     credentials: true
 }));
 
@@ -85,7 +88,6 @@ webApp.listen(WEB_SERVER_PORT, () => console.log(`Server running on port ${WEB_S
 
 // ######################################################## //
 const redirectRoutes = require("./routes/redirectRoutes");
-const REDIRECT_SERVER_URL = process.env.REDIRECT_SERVER_URL || "http://localhost:3001";
 const REDIRECT_SERVER_PORT = process.env.REDIRECT_SERVER_PORT || 3001;
 
 const redirectApp = express();
