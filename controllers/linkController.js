@@ -1,120 +1,216 @@
-const { Link, Click } = require("../models");
-const Sequelize = require("sequelize");
+const { PrismaClient,Prisma } = require('@prisma/client');
+const prisma = new PrismaClient({
+  errorFormat: 'minimal',
+});
+
+const { urlValidator,isShortCodeInvalid } = require("../utils/validators");
+
+const REDIRECT_SERVER_URL = process.env.REDIRECT_SERVER_URL || "http://localhost:3001";
 
 const generateShortCode = require("../utils/shortCodeGenerator"); // Import the utility function
 
 const createLink = async (req, res) => {
-  const { originalUrl, alias, shortenedUrl } = req.body;
+  const { originalUrl, shortUrl, alias } = req.body;
+
+  //Validating the URL
+  const urlResult = urlValidator(originalUrl);
+  if (!urlResult.success) {
+    return res.status(urlResult.code).json({ error: urlResult.message });
+  }
+
+  console.log("Short URL:", isShortCodeInvalid(shortUrl));
+
+  if(isShortCodeInvalid(shortUrl)){
+    return res.status(400).json({ error: "Invalid Short URL." });
+  }
+
   try {
-    const { success, code, message } = await generateShortCode(shortenedUrl);
+    const { success, code, message } = await generateShortCode(shortUrl);
     if (!success) {
+      console.error("Error in generateShortCode:", message);
       return res.status(409).json({ error: message }); // 409 Conflict is often used for duplicate resource
     }
-    const link = await Link.create({ originalUrl, shortenedUrl: code, alias });
+    const link = await prisma.link.create({data:{ originalUrl, shortUrl: code, alias,createdById: req.user.id }});
     res.json(link);
-  } catch (error) {
-    res.status(500).json({ error: error.message });
+  }catch (error) {
+    console.error("Error in createLink:", error);
+    res.status(500).json({ error: "Something went wrong" });
   }
 };
 
-const getLink = async (req, res) => {
-  const { id } = req.params;
-  try {
-    const link = await Link.findByPk(id);
-    if (!link) {
-      return res.status(404).json({ message: "Link not found" });
-    }
-    res.json(link);
-  } catch (error) {
-    res.status(500).json({ error: error.message });
-  }
-};
 
 const updateLink = async (req, res) => {
-  const { id } = req.params;
-  const { originalUrl, shortenedUrl, alias } = req.body;
-
   try {
-    const link = await Link.findByPk(id);
-    if (!link) {
-      return res.status(404).json({ message: "Link not found" });
+    const { id } = req.params;
+    const linkId = parseInt(id, 10);
+    const { originalUrl, shortUrl, alias } = req.body;
+
+    const link = await prisma.link.findFirst({ where: { id: linkId } });
+    if(link.createdById !== req.user.id && req.user.role !== 'admin'){
+      return res.status(403).json({ error: "You are not authorized to update this link." });
     }
 
-    // Generate or validate the new shortened URL
-    const { success, code, message } = await generateShortCode(shortenedUrl);
-    if (!success) {
-      return res.status(409).json({ error: message }); // Conflict if the new shortened URL is already in use
+    //Validating the URL
+    const urlResult = urlValidator(originalUrl);
+    if (!urlResult.success) {
+      return res.status(urlResult.code).json({ error: urlResult.message });
     }
 
-    // Update the link with new values
-    link.originalUrl = originalUrl;
-    link.shortenedUrl = code; // Use the new or validated code
-    link.alias = alias;
-    await link.save();
-    res.json(link);
-  } catch (error) {
-    res.status(500).json({ error: error.message });
+    if(isShortCodeInvalid(shortUrl)){
+      return res.status(400).json({ error: "Invalid Short URL." });
+    }
+
+    const updatedLink = await prisma.link.update({
+      where: { id: linkId },
+      data: { originalUrl, shortUrl, alias },
+    });
+
+    res.json(updatedLink);
+  } catch (e) {
+    if(e instanceof Prisma.PrismaClientKnownRequestError)
+      {
+        if(e.code === 'P2002')
+          res.status(500).json({ error: "The Shortcode Already Exist" });
+        if(e.code === 'P2025')
+          res.status(500).json({ error: "The Link does not exists" });
+      }else{
+        res.status(500).json({ error: "Internal Server Error" });
+      }
   }
 };
+
 
 const deleteLink = async (req, res) => {
   const { id } = req.params;
+  const linkId = parseInt(id, 10);
   try {
-    const link = await Link.findByPk(id);
-    if (!link) {
-      return res.status(404).json({ message: "Link not found" });
+
+    const link = await prisma.link.findFirst({ where: { id: linkId } });
+    if(link.createdById !== req.user.id && req.user.role !== 'admin'){
+      return res.status(403).json({ error: "You are not authorized to delete this link." });
     }
-    link.shortenedUrl = link.shortenedUrl + "_" + link.id;
-    await link.save();
-    await link.destroy();
+
+    const deletedLink = await prisma.link.delete({ where: { id: linkId } });
+    
     res.json({ message: "Link deleted" });
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    if(e instanceof Prisma.PrismaClientKnownRequestError)
+      {
+        if(e.code === 'P2025')
+          res.status(500).json({ error: "The Link does not exists" });
+      }else{
+        res.status(500).json({ error: "Internal Server Error" });
+      }
   }
 };
 
-const getAllLinks = async (req, res) => {
-  try {
-    console.log("getAllLinks called");
-    const links = await Link.findAll({
-      attributes: [
-        "id",
-        "originalUrl",
-        "shortenedUrl",
-        "alias", // include all required Link attributes
-        [Sequelize.fn("COUNT", Sequelize.col("clicks.id")), "clickCount"], // Aggregate function to count Clicks
-      ],
-      include: [
-        {
-          model: Click,
-          as: "clicks",
-          attributes: [], // No attributes needed from Clicks
-        },
-      ],
-      group: [
-        "Link.id",
-        "Link.originalUrl",
-        "Link.shortenedUrl",
-        "Link.alias",
-        "Link.deletedAt",
-        "Link.createdAt",
-        "Link.updatedAt",
-      ], // Ensure grouping by all Link attributes
-      order: [["updatedAt", "DESC"]], // Sorting links by updatedAt in descending order
-    });
 
+//restrict to admin only
+const getAllLinks = async (req, res) => {
+  const {id} = req.params;
+  try{
+    const links = await prisma.link.findMany({
+      select: {
+      id: true,
+      originalUrl: true,
+      shortUrl: true,
+      alias: true,
+      _count: {
+        select: { clicks: true }, // Aggregate function to count Clicks
+        },
+      },
+      orderBy: {
+      createdAt: 'desc', // Sorting links by updatedAt in descending order
+      },
+    });
     // Converting to JSON might be necessary to properly see the results
-    res.json(links.map((link) => link.toJSON()));
+    const result = {'redirectServerUrl': REDIRECT_SERVER_URL, 'links': links};
+    res.json(result);
   } catch (error) {
     console.error("Error in getAllLinks:", error);
     res.status(500).json({ error: error.message });
   }
 };
 
+//this will return the links created by the user
+const getMyLinks = async (req, res) => {
+  try{
+    const links = await prisma.link.findMany({
+      where: { createdById: req.user.id },
+      select: {
+      id: true,
+      originalUrl: true,
+      shortUrl: true,
+      alias: true,
+      _count: {
+        select: { clicks: true }, // Aggregate function to count Clicks
+      },
+      },
+      orderBy: {
+      createdAt: 'desc', // Sorting links by updatedAt in descending order
+      },
+    });
+    // Converting to JSON might be necessary to properly see the results
+    const result = {'redirectServerUrl': REDIRECT_SERVER_URL, 'links': links};
+    res.json(result);
+  } catch (error) {
+    console.error("Error in getAllLinks:", error);
+    res.status(500).json({ error: error.message });
+  }
+};
+
+//this will be used by admin only
+const getLinksById = async (req, res) => {
+  console.log("getLinksById invoked");
+  const {id} = req.params;
+
+  // Check if the 'id' exists and is a valid number (using a regular expression for numeric validation)
+  if (!id || !/^\d+$/.test(id)) {
+    return res.status(400).json({ error: "Invalid User ID, must be a number." });
+  }
+  
+  const userId = parseInt(id, 10);
+
+  if(userId !== req.user.id && req.user.role !== 'admin'){
+    return res.status(403).json({ error: "You are not authorized to access this link." });
+  }
+
+  try{
+    const links = await prisma.link.findMany({
+      where: { createdById: userId },
+      select: {
+      id: true,
+      originalUrl: true,
+      shortUrl: true,
+      alias: true,
+      _count: {
+        select: { clicks: true }, // Aggregate function to count Clicks
+      },
+      },
+      orderBy: {
+      createdAt: 'desc', // Sorting links by updatedAt in descending order
+      },
+    });
+    // Converting to JSON might be necessary to properly see the results
+    const result = {'redirectServerUrl': REDIRECT_SERVER_URL, 'links': links};
+    res.json(result);
+  } catch (error) {
+    console.error("Error in getAllLinks:", error);
+    res.status(500).json({ error: error.message });
+  }
+};
+
+const doesShortCodeExist = async (shortUrl) => {
+  const link = await prisma.link.findFirst({ where: { shortUrl: shortUrl } });
+  return !!link;
+};
+
 module.exports = {
   createLink,
-  getLink,
   updateLink,
   deleteLink,
   getAllLinks,
+  getMyLinks,
+  getLinksById,
+  doesShortCodeExist,
 };

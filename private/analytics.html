@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Analytics Dashboard</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+    <h1>Analytics Dashboard</h1>
+
+    <h2>Clicks by Platform</h2>
+    <canvas id="clicksByPlatformChart"></canvas>
+
+    <h2>Clicks by Time Period</h2>
+    <canvas id="clicksByTimePeriodChart"></canvas>
+
+    <h2>Top Links</h2>
+    <ul id="topLinksList"></ul>
+
+    <h2>Peak Click Periods</h2>
+    <canvas id="peakClickPeriodsChart"></canvas>
+
+    <script>
+        async function fetchData(url) {
+            const response = await fetch(url);
+            return response.json();
+        }
+
+        async function renderClicksByPlatform() {
+            const data = await fetchData('/api/clicks/platform/stats');
+            const labels = data.map(item => item.platform);
+            const counts = data.map(item => item._count._all);
+
+            new Chart(document.getElementById('clicksByPlatformChart'), {
+                type: 'bar',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: 'Clicks by Platform',
+                        data: counts,
+                        backgroundColor: 'rgba(75, 192, 192, 0.2)',
+                        borderColor: 'rgba(75, 192, 192, 1)',
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    scales: {
+                        y: {
+                            beginAtZero: true
+                        }
+                    }
+                }
+            });
+        }
+
+        async function renderClicksByTimePeriod() {
+            const data = await fetchData('/api/clicks/time/stats');
+            const labels = data.map(item => item.period);
+            const counts = data.map(item => item.clickCount);
+
+            new Chart(document.getElementById('clicksByTimePeriodChart'), {
+                type: 'line',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: 'Clicks by Time Period',
+                        data: counts,
+                        backgroundColor: 'rgba(153, 102, 255, 0.2)',
+                        borderColor: 'rgba(153, 102, 255, 1)',
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    scales: {
+                        y: {
+                            beginAtZero: true
+                        }
+                    }
+                }
+            });
+        }
+
+        async function renderTopLinks() {
+            const data = await fetchData('/api/clicks/top/links');
+            const list = document.getElementById('topLinksList');
+            list.innerHTML = '';
+            data.forEach(item => {
+                const listItem = document.createElement('li');
+                listItem.textContent = `${item.url} - ${item.clickCount} clicks`;
+                list.appendChild(listItem);
+            });
+        }
+
+        async function renderPeakClickPeriods() {
+            const data = await fetchData('/api/clicks/peak/periods');
+            const labels = data.map(item => item.period);
+            const counts = data.map(item => item.clickCount);
+
+            new Chart(document.getElementById('peakClickPeriodsChart'), {
+                type: 'bar',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: 'Peak Click Periods',
+                        data: counts,
+                        backgroundColor: 'rgba(255, 159, 64, 0.2)',
+                        borderColor: 'rgba(255, 159, 64, 1)',
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    scales: {
+                        y: {
+                            beginAtZero: true
+                        }
+                    }
+                }
+            });
+        }
+
+        renderClicksByPlatform();
+        renderClicksByTimePeriod();
+        renderTopLinks();
+        renderPeakClickPeriods();
+    </script>
+</body>
+</html>

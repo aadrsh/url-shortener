@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Manage Users</title>
+    <link href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Arial', sans-serif;
+            background-color: #f8f9fa;
+            padding: 20px;
+        }
+        .table-container {
+            margin-bottom: 20px;
+        }
+        .pagination {
+            justify-content: center;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1 class="mb-4">Manage Users</h1>
+        <button class="btn btn-success mb-4" data-toggle="modal" data-target="#addUserModal">Add New User</button>
+        <div class="table-container">
+            <table class="table table-bordered">
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Name</th>
+                        <th>Email</th>
+                        <th>Role</th>
+                        <th>Active</th>
+                        <th>Link Count</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody id="usersTableBody">
+                    <!-- Users will be populated here -->
+                </tbody>
+            </table>
+        </div>
+        <nav>
+            <ul class="pagination">
+                <li class="page-item"><a class="page-link" href="#" id="prevPage">Previous</a></li>
+                <li class="page-item"><a class="page-link" href="#" id="nextPage">Next</a></li>
+            </ul>
+        </nav>
+    </div>
+
+    <script>
+        let currentPage = 1;
+        const limit = 10;
+
+        async function fetchUsers(page = 1) {
+            try {
+                const response = await fetch(`/api/users?page=${page}&limit=${limit}`);
+                const users = await response.json();
+                const usersTableBody = document.querySelector('#usersTableBody');
+                usersTableBody.innerHTML = '';
+
+                users.forEach(user => {
+                    const row = document.createElement('tr');
+                    row.innerHTML = `
+                        <td>${user.id}</td>
+                        <td>${user.name}</td>
+                        <td>${user.email}</td>
+                        <td>${user.role}</td>
+                        <td>${user.isActive ? 'Yes' : 'No'}</td>
+                        <td><a href="/userview?id=${user.id}">${user._count.links}</a></td>
+                        <td>
+                            <button class="btn btn-primary btn-sm" onclick="updateUser(${user.id})">Update</button>
+                            <button class="btn btn-warning btn-sm" onclick="disableUser(${user.id})">Disable</button>
+                            <button class="btn btn-danger btn-sm" onclick="deleteUser(${user.id})">Delete</button>
+                        </td>
+                    `;
+                    usersTableBody.appendChild(row);
+                });
+            } catch (error) {
+                console.error('Failed to fetch users', error);
+            }
+        }
+
+        async function updateUser(id) {
+            const user = await fetch(`/api/users/${id}`).then(res => res.json());
+            const email = prompt('Enter new email:', user.email);
+            const name = prompt('Enter new name:', user.name);
+            const role = prompt('Enter new role:', user.role);
+            const isActive = confirm('Is the user active?');
+
+            if (email && name && role) {
+                try {
+                    await fetch(`/api/users/${id}`, {
+                        method: 'PATCH',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({ email, name, role, isActive })
+                    });
+                    fetchUsers(currentPage);
+                } catch (error) {
+                    console.error('Failed to update user', error);
+                }
+            }
+        }
+
+        async function disableUser(id) {
+            try {
+                await fetch(`/api/users/${id}/disable`, { method: 'PATCH' });
+                fetchUsers(currentPage);
+            } catch (error) {
+                console.error('Failed to disable user', error);
+            }
+        }
+
+        async function deleteUser(id) {
+            try {
+                await fetch(`/api/users/${id}`, { method: 'DELETE' });
+                fetchUsers(currentPage);
+            } catch (error) {
+                console.error('Failed to delete user', error);
+            }
+        }
+
+        document.querySelector('#prevPage').addEventListener('click', (event) => {
+            event.preventDefault();
+            if (currentPage > 1) {
+                currentPage--;
+                fetchUsers(currentPage);
+            }
+        });
+
+        document.querySelector('#nextPage').addEventListener('click', (event) => {
+            event.preventDefault();
+            currentPage++;
+            fetchUsers(currentPage);
+        });
+
+        document.addEventListener('DOMContentLoaded', () => fetchUsers(currentPage));
+    </script>
+    <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.5.4/dist/umd/popper.min.js"></script>
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+
+    <div class="modal fade" id="addUserModal" tabindex="-1" aria-labelledby="addUserModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="addUserModalLabel">Add New User</h5>
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
+                </div>
+                <div class="modal-body">
+                    <form id="addUserForm">
+                        <div class="form-group">
+                            <label for="userName">Name</label>
+                            <input type="text" class="form-control" id="userName" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="userEmail">Email</label>
+                            <input type="email" class="form-control" id="userEmail" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="userRole">Role</label>
+                            <input type="text" class="form-control" id="userRole" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="userIsActive">Active</label>
+                            <select class="form-control" id="userIsActive" required>
+                                <option value="true">Yes</option>
+                                <option value="false">No</option>
+                            </select>
+                        </div>
+                        <button type="submit" class="btn btn-primary">Add User</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        document.querySelector('#addUserForm').addEventListener('submit', async (event) => {
+            event.preventDefault();
+            const name = document.querySelector('#userName').value;
+            const email = document.querySelector('#userEmail').value;
+            const role = document.querySelector('#userRole').value;
+            const isActive = document.querySelector('#userIsActive').value === 'true';
+
+            try {
+                await fetch('/api/users', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ name, email, role, isActive })
+                });
+                $('#addUserModal').modal('hide');
+                fetchUsers(currentPage);
+            } catch (error) {
+                console.error('Failed to add user', error);
+            }
+        });
+    </script>
+</body>
+</html>
