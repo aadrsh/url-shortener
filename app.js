@@ -79,8 +79,8 @@ webApp.get('/*', (req, res) => {
     res.sendFile(__dirname + "/public/404.html");
 });
 
-const WEB_APP_PORT = process.env.PORT || 3000;
-webApp.listen(WEB_APP_PORT, () => console.log(`Server running on port ${WEB_APP_PORT}`));
+const WEB_SERVER_PORT = process.env.WEB_SERVER_PORT || 3000;
+webApp.listen(WEB_SERVER_PORT, () => console.log(`Server running on port ${WEB_SERVER_PORT}`));
 
 
 // ######################################################## //
