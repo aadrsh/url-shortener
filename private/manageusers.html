@@ -84,25 +84,35 @@
 
         async function updateUser(id) {
             const user = await fetch(`/api/users/${id}`).then(res => res.json());
-            const email = prompt('Enter new email:', user.email);
-            const name = prompt('Enter new name:', user.name);
-            const role = prompt('Enter new role:', user.role);
-            const isActive = confirm('Is the user active?');
 
-            if (email && name && role) {
-                try {
-                    await fetch(`/api/users/${id}`, {
-                        method: 'PATCH',
-                        headers: {
-                            'Content-Type': 'application/json'
-                        },
-                        body: JSON.stringify({ email, name, role, isActive })
-                    });
-                    fetchUsers(currentPage);
-                } catch (error) {
-                    console.error('Failed to update user', error);
-                }
+            document.querySelector('#updateUserName').value = user.name;
+            document.querySelector('#updateUserEmail').value = user.email;
+            document.querySelector('#updateUserRole').value = user.role;
+            document.querySelector('#updateUserIsActive').value = user.isActive ? 'true' : 'false';
+
+            $('#updateUserModal').modal('show');
+
+            document.querySelector('#updateUserForm').onsubmit = async (event) => {
+            event.preventDefault();
+            const name = document.querySelector('#updateUserName').value;
+            const email = document.querySelector('#updateUserEmail').value;
+            const role = document.querySelector('#updateUserRole').value;
+            const isActive = document.querySelector('#updateUserIsActive').value === 'true';
+
+            try {
+                await fetch(`/api/users/${id}`, {
+                method: 'PATCH',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ name, email, role, isActive })
+                });
+                $('#updateUserModal').modal('hide');
+                fetchUsers(currentPage);
+            } catch (error) {
+                console.error('Failed to update user', error);
             }
+            };
         }
 
         async function disableUser(id) {
@@ -179,6 +189,44 @@
             </div>
         </div>
     </div>
+
+    <div class="modal fade" id="updateUserModal" tabindex="-1" aria-labelledby="updateUserModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="updateUserModalLabel">Update User</h5>
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
+                </div>
+                <div class="modal-body">
+                    <form id="updateUserForm">
+                        <div class="form-group">
+                            <label for="userName">Name</label>
+                            <input type="text" class="form-control" id="updateUserName" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="userEmail">Email</label>
+                            <input type="email" class="form-control" id="updateUserEmail" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="userRole">Role</label>
+                            <input type="text" class="form-control" id="updateUserRole" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="updateUserIsActive">Active</label>
+                            <select class="form-control" id="updateUserIsActive" required>
+                                <option value="true">Yes</option>
+                                <option value="false">No</option>
+                            </select>
+                        </div>
+                        <button type="submit" class="btn btn-primary">Update User</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
 
     <script>
         document.querySelector('#addUserForm').addEventListener('submit', async (event) => {
