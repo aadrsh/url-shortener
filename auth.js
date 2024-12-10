@@ -19,6 +19,9 @@ passport.use(new GoogleStrategy({
       if(!user){
         return done(null, false, {message: 'user not found'});
       }
+      if(!user.isActive){
+        return done(null, false, {message: 'user not active'});
+      }
       return done(null, user);
     }).catch(err => {
       return done(err, false,{message: 'Error occured'});
