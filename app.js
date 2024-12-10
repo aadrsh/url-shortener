@@ -78,8 +78,12 @@ webApp.get('/userview', authMiddleware, (req, res) => {
     res.sendFile(__dirname + "/private/userview.html");
 });
 
-webApp.get('/*', (req, res) => {
+webApp.get('/notfound', (req, res) => {
     res.sendFile(__dirname + "/public/404.html");
+});
+
+webApp.get('/*', (req, res) => {
+    res.redirect('/notfound');
 });
 
 const WEB_SERVER_PORT = process.env.WEB_SERVER_PORT || 3000;

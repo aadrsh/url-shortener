@@ -22,7 +22,7 @@ const getExternalLink = async (req, res) => {
       recordClick(link.id, requestIp.getClientIp(req), req.useragent.platform, req.useragent.browser);
       res.redirect(link.originalUrl);
     } else {
-      res.status(404).redirect(WEB_SERVER_URL + "/404.html?reason=Code-Not-Found");
+      res.status(404).redirect(WEB_SERVER_URL + "/brokenlink");
     }
   } catch (error) {
     console.error("Database or server error:", error);
@@ -36,13 +36,13 @@ const getQRCode = async (req, res) => {
 
   // Validate shortcode
   if (isShortCodeInvalid(shortcode)) {
-    return res.redirect(WEB_SERVER_URL + "/404.html?reason=Invalid-Text-Code");
+    return res.redirect(WEB_SERVER_URL + "/brokenlink");
   }
   
   if(!await doesShortCodeExist(shortcode)){
-    return res.redirect(WEB_SERVER_URL + "/404.html?reason=Code-Not-Found");
+    return res.redirect(WEB_SERVER_URL + "/brokenlink");
   }
-
+  // 404.html?reason=Code-Not-Found
   try {
     // Generate QR code for the long URL
     qr.toDataURL(REDIRECT_SERVER_URL + '/' + shortcode, (err, qrUrl) => {
