@@ -118,6 +118,7 @@ module.exports = {
     getUserById,
     updateUser,
     disableUser,
+    enableUser,
     deleteUser,
     getAllUsers
 };
