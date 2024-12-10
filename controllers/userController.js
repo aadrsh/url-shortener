@@ -65,6 +65,20 @@ const disableUser = async (req, res) => {
     }
 };
 
+const enableUser = async (req, res) => {
+    const { id } = req.params;
+
+    try {
+        const user = await prisma.user.update({
+            where: { id: parseInt(id) },
+            data: { isActive: true }
+        });
+        res.status(200).json(user);
+    } catch (error) {
+        res.status(500).json({ error: 'User deactivation failed' });
+    }
+};
+
 const deleteUser = async (req, res) => {
     const { id } = req.params;
 

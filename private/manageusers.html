@@ -71,7 +71,9 @@
                         <td><a href="/userview?id=${user.id}">${user._count.links}</a></td>
                         <td>
                             <button class="btn btn-primary btn-sm" onclick="updateUser(${user.id})">Update</button>
-                            <button class="btn btn-warning btn-sm" onclick="disableUser(${user.id})">Disable</button>
+                            ${user.isActive ? 
+                                `<button class="btn btn-warning btn-sm" onclick="disableUser(${user.id})">Disable</button>` : 
+                                `<button class="btn btn-success btn-sm" onclick="enableUser(${user.id})">Enable</button>`}
                             <button class="btn btn-danger btn-sm" onclick="deleteUser(${user.id})">Delete</button>
                         </td>
                     `;
@@ -93,25 +95,25 @@
             $('#updateUserModal').modal('show');
 
             document.querySelector('#updateUserForm').onsubmit = async (event) => {
-            event.preventDefault();
-            const name = document.querySelector('#updateUserName').value;
-            const email = document.querySelector('#updateUserEmail').value;
-            const role = document.querySelector('#updateUserRole').value;
-            const isActive = document.querySelector('#updateUserIsActive').value === 'true';
+                event.preventDefault();
+                const name = document.querySelector('#updateUserName').value;
+                const email = document.querySelector('#updateUserEmail').value;
+                const role = document.querySelector('#updateUserRole').value;
+                const isActive = document.querySelector('#updateUserIsActive').value === 'true';
 
-            try {
-                await fetch(`/api/users/${id}`, {
-                method: 'PATCH',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({ name, email, role, isActive })
-                });
-                $('#updateUserModal').modal('hide');
-                fetchUsers(currentPage);
-            } catch (error) {
-                console.error('Failed to update user', error);
-            }
+                try {
+                    await fetch(`/api/users/${id}`, {
+                        method: 'PUT',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({ name, email, role, isActive })
+                    });
+                    $('#updateUserModal').modal('hide');
+                    fetchUsers(currentPage);
+                } catch (error) {
+                    console.error('Failed to update user', error);
+                }
             };
         }
 
@@ -121,6 +123,15 @@
                 fetchUsers(currentPage);
             } catch (error) {
                 console.error('Failed to disable user', error);
+            }
+        }
+
+        async function enableUser(id) {
+            try {
+                await fetch(`/api/users/${id}/enable`, { method: 'PATCH' });
+                fetchUsers(currentPage);
+            } catch (error) {
+                console.error('Failed to enable user', error);
             }
         }
 
@@ -226,7 +237,6 @@
             </div>
         </div>
     </div>
-
 
     <script>
         document.querySelector('#addUserForm').addEventListener('submit', async (event) => {
